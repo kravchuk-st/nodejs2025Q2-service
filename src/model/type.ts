@@ -1,25 +1,7 @@
 import { User } from 'src/users/entities/user.entity';
-
-export interface Artist {
-  id: string; // uuid v4
-  name: string;
-  grammy: boolean;
-}
-
-export interface Track {
-  id: string; // uuid v4
-  name: string;
-  artistId: string | null; // refers to Artist
-  albumId: string | null; // refers to Album
-  duration: number; // integer number
-}
-
-export interface Album {
-  id: string; // uuid v4
-  name: string;
-  year: number;
-  artistId: string | null; // refers to Artist
-}
+import { Track } from 'src/tracks/entities/track.entity';
+import { Artist } from 'src/artists/entities/artist.entity';
+import { Album } from 'src/albums/entities/album.entity';
 
 export interface Database {
   users: User[];
