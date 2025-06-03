@@ -1,10 +1,34 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { Module, Controller, Get } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { UsersModule } from './users/users.module';
+import { TracksModule } from './tracks/tracks.module';
+import { ArtistsModule } from './artists/artists.module';
+import { AlbumsModule } from './albums/albums.module';
+import { FavsModule } from './favs/favs.module';
+
+@Controller()
+class RootController {
+  @Get()
+  getRoot() {
+    return {
+      message: 'Home Library API',
+      documentation: '/doc',
+      users: '/users',
+    };
+  }
+}
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    UsersModule,
+    TracksModule,
+    ArtistsModule,
+    AlbumsModule,
+    FavsModule,
+  ],
+  controllers: [RootController],
 })
 export class AppModule {}
