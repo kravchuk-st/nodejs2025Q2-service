@@ -1,6 +1,8 @@
-ARG NODE_VERSION=18.16.0
+ARG NODE_VERSION=22.14.0
 
 FROM node:${NODE_VERSION}-alpine as development
+
+RUN apk add --no-cache python3 make g++
 
 WORKDIR /usr/src/app
 
