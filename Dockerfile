@@ -1,18 +1,20 @@
 ARG NODE_VERSION=22.14.0
 
-FROM node:${NODE_VERSION}-alpine as development
+FROM node:${NODE_VERSION}-alpine3.21 AS development
 
-RUN apk add --no-cache python3 make g++
+RUN apk update && apk upgrade && \
+    apk add --no-cache python3 make g++
 
 WORKDIR /usr/src/app
 
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci   
+COPY package*.json ./
+
+RUN npm install
 
 COPY . .
 
+RUN npx prisma generate
+
 EXPOSE 4000
 
-CMD npm run start:docker
+CMD ["npm", "run", "start:docker"]
