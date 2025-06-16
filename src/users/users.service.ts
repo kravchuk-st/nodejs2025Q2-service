@@ -6,36 +6,39 @@ import {
 import { PrismaService } from 'nestjs-prisma';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto) {
     const { login, password } = createUserDto;
+
+    const hashedPassword = await bcrypt.hash(password, +process.env.CRYPT_SALT);
+
     const version = 1;
 
     const newUser = await this.prisma.user.create({
       data: {
         login,
-        password,
+        password: hashedPassword,
         version,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
     });
 
-    const modifiedUser = {
+    const user = {
       ...newUser,
       createdAt: newUser.createdAt.getTime(),
       updatedAt: newUser.updatedAt.getTime(),
     };
 
-    return modifiedUser;
+    return user;
   }
 
-  async findAll(): Promise<User[]> {
+  async findAll() {
     const users = await this.prisma.user.findMany();
 
     return users.map((user) => ({
@@ -45,7 +48,7 @@ export class UsersService {
     }));
   }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -63,7 +66,25 @@ export class UsersService {
     return modifiedUser;
   }
 
-  async update(id: string, updatePasswordDto: UpdateUserDto): Promise<User> {
+  async findOneByLogin(login: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { login },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    const modifiedUser = {
+      ...user,
+      createdAt: user.createdAt.getTime(),
+      updatedAt: user.updatedAt.getTime(),
+    };
+
+    return modifiedUser;
+  }
+
+  async update(id: string, updatePasswordDto: UpdateUserDto) {
     const { newPassword, oldPassword } = updatePasswordDto;
 
     const user = await this.prisma.user.findUnique({
@@ -74,27 +95,36 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.password !== oldPassword) {
+    const pass = await bcrypt.compare(oldPassword, user.password);
+
+    if (!pass) {
       throw new ForbiddenException('Old password is wrong');
     }
+
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      +process.env.CRYPT_SALT,
+    );
 
     const updatedUser = await this.prisma.user.update({
       where: { id },
       data: {
-        password: newPassword,
+        password: hashedPassword,
         version: user.version + 1,
         updatedAt: new Date(),
       },
     });
 
-    return {
+    const modifiedUser = {
       ...updatedUser,
       createdAt: updatedUser.createdAt.getTime(),
       updatedAt: updatedUser.updatedAt.getTime(),
     };
+
+    return modifiedUser;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });

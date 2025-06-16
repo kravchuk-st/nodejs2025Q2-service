@@ -13,6 +13,8 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe());
 
+  await app.init();
+  
   const loggingService = app.get(LoggingService);
   const filter = new AllExceptionsFilter(loggingService);
 
@@ -26,7 +28,6 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-
   SwaggerModule.setup('doc', app, document);
 
   process.on('uncaughtException', (error) => {
@@ -48,6 +49,10 @@ async function bootstrap() {
   });
 
   await app.listen(PORT);
+  console.log(`Application is running on: http://localhost:${PORT}`);
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Failed to start application:', error);
+  process.exit(1);
+});
