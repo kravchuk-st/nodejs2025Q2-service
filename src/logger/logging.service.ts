@@ -12,6 +12,27 @@ export class LoggingService implements LoggerService {
     parseInt(process.env.MAX_LOG_FILE_SIZE_KB, 10) || 1024;
 
   private logger = new Logger();
+  private logsDirectoryReady: Promise<void>;
+
+  constructor() {
+    this.logsDirectoryReady = this.ensureLogsDirectory();
+  }
+
+  private async ensureLogsDirectory(): Promise<void> {
+    const logsDir = path.resolve(__dirname, '../../logs');
+    
+    try {
+      await fs.promises.access(logsDir);
+    } catch (error) {
+      try {
+        await fs.promises.mkdir(logsDir, { recursive: true });
+        this.logger.log(`Created logs directory: ${logsDir}`);
+      } catch (mkdirError) {
+        this.logger.error(`Failed to create logs directory: ${mkdirError}`);
+        throw mkdirError;
+      }
+    }
+  }
 
   log(message: string) {
     this.logMessage('log', message);
@@ -50,45 +71,49 @@ export class LoggingService implements LoggerService {
     return logLevelValues[level] <= logLevelValues[this.currentLogLevel];
   }
 
-  private writeLogToFile(
+  private async writeLogToFile(
     filePath: string,
     level: LogLevel,
     message: string,
     trace?: string,
   ) {
+    await this.logsDirectoryReady;
+
     const log = `${new Date().toISOString()} [${level}] - ${message}${
       trace ? '\nTrace: ' + trace : ''
     }\n`;
 
-    fs.stat(filePath, (err, stats) => {
-      if (!err && stats.size > this.maxLogFileSizeKb * 1024) {
+    try {
+      const stats = await fs.promises.stat(filePath);
+      if (stats.size > this.maxLogFileSizeKb * 1024) {
         const backupPath = filePath.replace(
           '.log',
           `_backup_${Date.now()}.log`,
         );
-        fs.rename(filePath, backupPath, (renameErr) => {
-          if (renameErr) {
-            this.logger.error(`Error renaming log file: ${renameErr}`);
-          }
-        });
+        try {
+          await fs.promises.rename(filePath, backupPath);
+        } catch (renameErr) {
+          this.logger.error(`Error renaming log file: ${renameErr}`);
+        }
       }
-    });
+    } catch (statErr) {
+    }
 
-    fs.appendFile(filePath, log, (err) => {
-      if (err) {
-        this.logger.error(`Error writing log to ${filePath}: ${err}`);
-      }
-    });
+    try {
+      await fs.promises.appendFile(filePath, log);
+    } catch (err) {
+      this.logger.error(`Error writing log to ${filePath}: ${err}`);
+    }
   }
 
-  private logMessage(
+  private async logMessage(
     level: LogLevel,
     message: string,
     isError: boolean = false,
   ) {
     if (this.shouldLog(level)) {
       const filePath = isError ? this.errorLogFilePath : this.logFilePath;
-      this.writeLogToFile(filePath, level, message);
+      await this.writeLogToFile(filePath, level, message);
     }
   }
 
