@@ -14,7 +14,7 @@ git clone https://github.com/kravchuk-st/nodejs2025Q2-service.git
 ## Switch to the develop branch
 
 ```
-git checkout dev_part2
+git checkout dev_part3
 ```
 
 ## Installing NPM modules
@@ -42,7 +42,7 @@ For more information about OpenAPI/Swagger please visit https://swagger.io/.
 After application running open new terminal (in attached mode) and enter:
 
 ```
-npm run test
+npm run test:auth
 ```
 
 ## Checking for vulnerabilities (in some cases, you may need to start VPN)
